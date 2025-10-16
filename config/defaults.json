@@ -1,0 +1,25 @@
+{
+  "empresa": {
+    "nombre": "HS POWER SPRING MÉXICO SA DE CV",
+    "direccion": "Circuito Cerezos Sur No. 106,",
+    "ciudad": "Parque Industrial San Francisco,",
+    "estado": "San Francisco de los Romo,",
+    "cp": "Aguascalientes, México. C.P.20355"
+  },
+  "pdf": {
+    "autor": "HSPS Logistics",
+    "creator": "HSPS Packing List Generator v2.0",
+    "title_color": "#000080",
+    "header_bg_color": "#E0E0E0",
+    "highlight_color_excel": "yellow"
+  },
+  "excel": {
+    "max_filas_busqueda_header": 10,
+    "encoding": "utf-8"
+  },
+  "ui": {
+    "theme": "light",
+    "page_icon": "📦",
+    "page_title": "HSPS Packing List Generator"
+  }
+}

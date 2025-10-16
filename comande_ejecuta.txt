@@ -1,2 +1,0 @@
-cd C:\Users\Erick\Desktop\PL
-streamlit run app.py
