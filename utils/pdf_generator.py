@@ -7,6 +7,18 @@ from reportlab.lib.units import inch
 from reportlab.lib import colors
 from reportlab.lib.enums import TA_CENTER
 
+def parse_float(value, default=0.0):
+    """Convierte un valor a float de forma segura"""
+    try:
+        if isinstance(value, (int, float)):
+            return float(value)
+        s = str(value).strip().replace(',', '').replace(' ', '')
+        if s == '':
+            return default
+        return float(s)
+    except:
+        return default
+
 def parse_int(value, default=0):
     """Convierte un valor a entero de forma segura"""
     try:
@@ -18,6 +30,49 @@ def parse_int(value, default=0):
         return int(float(s))
     except:
         return default
+
+def calcular_pesos_por_pallet(registros):
+    """
+    Calcula el peso neto y bruto por pallet
+    Suma peso_lote y peso_acumulado para cada pallet único
+    """
+    pesos_por_pallet = {}
+    
+    for reg in registros:
+        pallet = reg.get('numero_pallet', '')
+        if not pallet:
+            continue
+        
+        peso_lote = parse_float(reg.get('peso_lote', 0))
+        peso_acumulado = parse_float(reg.get('peso_acumulado', 0))
+        
+        if pallet not in pesos_por_pallet:
+            pesos_por_pallet[pallet] = {
+                'peso_neto': 0.0,
+                'peso_bruto': 0.0
+            }
+        
+        pesos_por_pallet[pallet]['peso_neto'] += peso_lote
+        pesos_por_pallet[pallet]['peso_bruto'] += peso_acumulado
+    
+    return pesos_por_pallet
+
+def formatear_lista_pesos(pesos_por_pallet):
+    """
+    Formatea los pesos por pallet en una lista ordenada
+    Retorna dos listas: net_weights y gross_weights
+    """
+    # Ordenar pallets numéricamente
+    pallets_ordenados = sorted(pesos_por_pallet.keys(), key=lambda x: int(x) if x.isdigit() else 0)
+    
+    net_weights = []
+    gross_weights = []
+    
+    for pallet in pallets_ordenados:
+        net_weights.append(f"{pesos_por_pallet[pallet]['peso_neto']:.2f}")
+        gross_weights.append(f"{pesos_por_pallet[pallet]['peso_bruto']:.2f}")
+    
+    return net_weights, gross_weights
 
 def generar_pdf_hsps(registros, datos_comercio, config_manager, modelo):
     """
@@ -37,6 +92,10 @@ def generar_pdf_hsps(registros, datos_comercio, config_manager, modelo):
     ship_to_cfg = pdf_cfg.get('ship_to', {})
     bill_to_cfg = pdf_cfg.get('bill_to', {})
     descripcion_producto = pdf_cfg.get('descripcion_producto', 'PRODUCTO')
+
+    # Calcular pesos por pallet
+    pesos_por_pallet = calcular_pesos_por_pallet(registros)
+    net_weights, gross_weights = formatear_lista_pesos(pesos_por_pallet)
 
     # Estilos personalizados
     title_style = ParagraphStyle('CustomTitle', parent=styles['Heading1'], fontSize=16, 
@@ -170,19 +229,35 @@ TAX ID: {datos_comercio.get('ship_to_tax', ship_to_cfg.get('tax_id', ''))}"""
     elementos.append(tabla_productos)
     elementos.append(Spacer(1, 10))
 
-    # TOTALES
-    pallets_unicos = set(reg.get('numero_pallet', '') for reg in registros if reg.get('numero_pallet'))
+    # TOTALES CON PESOS CALCULADOS
+    pallets_unicos = sorted(set(reg.get('numero_pallet', '') for reg in registros if reg.get('numero_pallet')), 
+                           key=lambda x: int(x) if x.isdigit() else 0)
     
-    totales_data = [
-        ["Total Pallets", "Dimensions (cm)", "Net weight (Kg)", "Gross weight (Kg)", "Total parts"],
-        [str(len(pallets_unicos)), datos_comercio.get('dimensions', ''), 
-         datos_comercio.get('net_weight', ''), datos_comercio.get('gross_weight', ''), str(total_quantity)]
+    # Calcular totales
+    total_peso_neto = sum(pesos_por_pallet[p]['peso_neto'] for p in pallets_unicos)
+    total_peso_bruto = sum(pesos_por_pallet[p]['peso_bruto'] for p in pallets_unicos)
+    
+    totales_headers = ["Total Pallets", "Dimensions (cm)", "Net weight (Kg)", "Gross weight (Kg)", "Total parts"]
+    
+    # Formatear pesos por pallet
+    net_weight_str = '<br/>'.join(net_weights) + f'<br/><b>TOTAL: {total_peso_neto:.2f}</b>'
+    gross_weight_str = '<br/>'.join(gross_weights) + f'<br/><b>TOTAL: {total_peso_bruto:.2f}</b>'
+    
+    totales_values = [
+        str(len(pallets_unicos)),
+        datos_comercio.get('dimensions', '100 X 110 X 109'),
+        Paragraph(net_weight_str, normal_style),
+        Paragraph(gross_weight_str, normal_style),
+        str(total_quantity)
     ]
+    
+    totales_data = [totales_headers, totales_values]
     tabla_totales = Table(totales_data, colWidths=[1.4*inch]*5)
     tabla_totales.setStyle(TableStyle([
         ('FONTNAME', (0,0), (-1,0), 'Helvetica-Bold'),
         ('FONTSIZE', (0,0), (-1,-1), 8),
         ('ALIGN', (0,0), (-1,-1), 'CENTER'),
+        ('VALIGN', (0,0), (-1,-1), 'TOP'),
         ('GRID', (0,0), (-1,-1), 0.5, colors.black),
         ('BACKGROUND', (0,0), (-1,0), colors.HexColor('#E0E0E0')),
     ]))
