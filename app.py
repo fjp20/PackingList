@@ -14,7 +14,7 @@ from utils.excel_reader import (
     parse_int
 )
 # Asumiendo que pdf_generator.py tendrá la función generar_pdf_hsps refactorizada
-# from utils.pdf_generator import generar_pdf_hsps
+from utils.pdf_generator import generar_pdf_hsps
 
 # -----------------------
 # Inicialización
@@ -450,35 +450,20 @@ def paso_3_generar_pdf(config_mgr: ConfigManager, modelo: str):
     if generar_btn:
         try:
             with st.spinner("Generando PDF en formato HSPS..."):
-                # AQUÍ iría la llamada a generar_pdf_hsps refactorizado
-                # buffer = generar_pdf_hsps(registros, datos_comercio, config_mgr, modelo)
-                
-                # Por ahora, placeholder:
-                st.info("ℹ️ La función generar_pdf_hsps debe ser refactorizada para usar la configuración JSON")
-                st.code("""
-# Ejemplo de uso:
-from utils.pdf_generator import generar_pdf_hsps
-
-buffer = generar_pdf_hsps(
-    registros=registros,
-    datos_comercio=datos_comercio,
-    config_manager=config_mgr,
-    modelo=modelo
-)
-                """)
+                # Generar PDF
+                buffer = generar_pdf_hsps(registros, datos_comercio, config_mgr, modelo)
             
             st.success("✅ PDF generado exitosamente!")
-            
-            # st.download_button(
-            #     label="⬇️ Descargar Packing List PDF",
-            #     data=buffer.getvalue(),
-            #     file_name=f"{nombre_archivo}.pdf",
-            #     mime="application/pdf",
-            #     use_container_width=True,
-            #     type="primary"
-            # )
-            
-            st.balloons()
+
+            # Botón de descarga
+            st.download_button(
+                label="⬇️ Descargar Packing List PDF",
+                data=buffer.getvalue(),
+                file_name=f"{nombre_archivo}.pdf",
+                mime="application/pdf",
+                use_container_width=True,
+                type="primary"
+            )
             
         except Exception as e:
             st.error(f"❌ Error generando PDF: {e}")

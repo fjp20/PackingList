@@ -1,249 +1,234 @@
-import json
-import os
-from typing import Dict, List, Optional, Any
-from pathlib import Path
+import io
+from datetime import datetime
+from reportlab.lib.pagesizes import A4
+from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Spacer, Paragraph
+from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+from reportlab.lib.units import inch
+from reportlab.lib import colors
+from reportlab.lib.enums import TA_CENTER
 
-class ConfigManager:
-    """Gestor de configuraciones de modelos desde JSON"""
-    
-    def __init__(self, config_path: str = "config/models.json"):
-        self.config_path = Path(config_path)
-        self.config = self._load_config()
-    
-    def _load_config(self) -> Dict:
-        """Carga la configuración desde el archivo JSON"""
-        try:
-            if self.config_path.exists():
-                with open(self.config_path, 'r', encoding='utf-8') as f:
-                    return json.load(f)
-            else:
-                print(f"⚠️ Archivo {self.config_path} no encontrado. Usando configuración vacía.")
-                return {}
-        except Exception as e:
-            print(f"❌ Error cargando configuración: {e}")
-            return {}
-    
-    def save_config(self) -> bool:
-        """Guarda la configuración actual en el archivo JSON"""
-        try:
-            self.config_path.parent.mkdir(parents=True, exist_ok=True)
-            with open(self.config_path, 'w', encoding='utf-8') as f:
-                json.dump(self.config, f, indent=2, ensure_ascii=False)
-            return True
-        except Exception as e:
-            print(f"❌ Error guardando configuración: {e}")
-            return False
-    
-    def get_models(self, activos_solo: bool = True) -> List[str]:
-        """Obtiene lista de modelos disponibles"""
-        if activos_solo:
-            return [k for k, v in self.config.items() if v.get('activo', True)]
-        return list(self.config.keys())
-    
-    def get_model_config(self, modelo: str) -> Optional[Dict]:
-        """Obtiene la configuración completa de un modelo"""
-        return self.config.get(modelo)
-    
-    def get_excel_config(self, modelo: str) -> Optional[Dict]:
-        """Obtiene configuración de Excel para un modelo"""
-        model_cfg = self.get_model_config(modelo)
-        return model_cfg.get('excel') if model_cfg else None
-    
-    def get_pdf_config(self, modelo: str) -> Optional[Dict]:
-        """Obtiene configuración de PDF para un modelo"""
-        model_cfg = self.get_model_config(modelo)
-        return model_cfg.get('pdf') if model_cfg else None
-    
-    def get_column_aliases(self, modelo: str, columna: str) -> List[str]:
-        """Obtiene los aliases de una columna específica"""
-        excel_cfg = self.get_excel_config(modelo)
-        if excel_cfg and 'columnas' in excel_cfg:
-            return excel_cfg['columnas'].get(columna, [])
-        return []
-    
-    def get_calculos_config(self, modelo: str) -> Optional[Dict]:
-        """Obtiene configuración de cálculos (peso/dimensiones)"""
-        excel_cfg = self.get_excel_config(modelo)
-        return excel_cfg.get('calculos') if excel_cfg else None
-    
-    def get_default_values(self, modelo: str) -> Dict:
-        """Obtiene valores por defecto para el PDF"""
-        pdf_cfg = self.get_pdf_config(modelo)
-        return pdf_cfg.get('defaults', {}) if pdf_cfg else {}
-    
-    def add_model(self, nombre: str, config: Dict) -> bool:
-        """Agrega un nuevo modelo a la configuración"""
-        try:
-            self.config[nombre] = config
-            return self.save_config()
-        except Exception as e:
-            print(f"❌ Error agregando modelo: {e}")
-            return False
-    
-    def update_model(self, nombre: str, config: Dict) -> bool:
-        """Actualiza la configuración de un modelo existente"""
-        if nombre in self.config:
-            self.config[nombre].update(config)
-            return self.save_config()
-        return False
-    
-    def delete_model(self, nombre: str) -> bool:
-        """Elimina un modelo de la configuración"""
-        if nombre in self.config:
-            del self.config[nombre]
-            return self.save_config()
-        return False
-    
-    def export_model(self, nombre: str, filepath: str) -> bool:
-        """Exporta la configuración de un modelo a un archivo JSON"""
-        try:
-            model_cfg = self.get_model_config(nombre)
-            if model_cfg:
-                with open(filepath, 'w', encoding='utf-8') as f:
-                    json.dump({nombre: model_cfg}, f, indent=2, ensure_ascii=False)
-                return True
-            return False
-        except Exception as e:
-            print(f"❌ Error exportando modelo: {e}")
-            return False
-    
-    def import_model(self, filepath: str) -> bool:
-        """Importa un modelo desde un archivo JSON"""
-        try:
-            with open(filepath, 'r', encoding='utf-8') as f:
-                imported = json.load(f)
-            
-            for nombre, config in imported.items():
-                self.config[nombre] = config
-            
-            return self.save_config()
-        except Exception as e:
-            print(f"❌ Error importando modelo: {e}")
-            return False
-    
-    def validate_model(self, modelo: str) -> tuple[bool, List[str]]:
-        """Valida que un modelo tenga toda la configuración necesaria"""
-        errors = []
-        model_cfg = self.get_model_config(modelo)
-        
-        if not model_cfg:
-            return False, [f"Modelo '{modelo}' no encontrado"]
-        
-        # Validar secciones obligatorias
-        if 'excel' not in model_cfg:
-            errors.append("Falta sección 'excel'")
-        else:
-            excel_cfg = model_cfg['excel']
-            if 'columnas' not in excel_cfg:
-                errors.append("Falta 'excel.columnas'")
-            if 'calculos' not in excel_cfg:
-                errors.append("Falta 'excel.calculos'")
-        
-        if 'pdf' not in model_cfg:
-            errors.append("Falta sección 'pdf'")
-        else:
-            pdf_cfg = model_cfg['pdf']
-            required = ['descripcion_producto', 'shipper', 'ship_to', 'bill_to', 'defaults']
-            for req in required:
-                if req not in pdf_cfg:
-                    errors.append(f"Falta 'pdf.{req}'")
-        
-        return len(errors) == 0, errors
-    
-    def get_all_column_aliases(self, modelo: str) -> Dict[str, List[str]]:
-        """Obtiene todos los aliases de columnas de un modelo"""
-        excel_cfg = self.get_excel_config(modelo)
-        return excel_cfg.get('columnas', {}) if excel_cfg else {}
-
-#Funciones generadas por chatgpt
+def parse_int(value, default=0):
+    """Convierte un valor a entero de forma segura"""
+    try:
+        if isinstance(value, (int, float)):
+            return int(value)
+        s = str(value).strip().replace(',', '').replace(' ', '')
+        if s == '':
+            return default
+        return int(float(s))
+    except:
+        return default
 
 def generar_pdf_hsps(registros, datos_comercio, config_manager, modelo):
     """
-    Genera un PDF de Packing List basado en los registros, los datos de comercio
-    y la configuración JSON del modelo.
-    Devuelve un buffer BytesIO listo para descargar.
+    Genera el PDF en formato HSPS con configuración desde JSON
     """
-
-    # Cargar configuración desde JSON
-    model_pdf_cfg = config_manager.get_pdf_config(modelo) or {}
-    global_cfg = _load_global_pdf_config()
-
-    # Crear buffer
     buffer = io.BytesIO()
-    doc = SimpleDocTemplate(
-        buffer,
-        pagesize=A4,
-        title=f"Packing List - {modelo}",
-        author=global_cfg.get("autor", "HSPS Logistics"),
-        creator=global_cfg.get("creator", "HSPS Packing List Generator"),
-    )
-
+    doc = SimpleDocTemplate(buffer, pagesize=A4, rightMargin=30, leftMargin=30, topMargin=30, bottomMargin=30)
+    elementos = []
     styles = getSampleStyleSheet()
-    elements = []
 
-    # Encabezado
-    title_color = colors.HexColor(global_cfg.get("title_color", "#000080"))
-    elements.append(Paragraph(f"<b><font color='{title_color}'>PACKING LIST - {modelo}</font></b>", styles["Title"]))
-    elements.append(Spacer(1, 12))
+    # Obtener configuración del modelo
+    pdf_cfg = config_manager.get_pdf_config(modelo)
+    if not pdf_cfg:
+        raise Exception(f"No hay configuración de PDF para el modelo '{modelo}'")
+    
+    shipper_cfg = pdf_cfg.get('shipper', {})
+    ship_to_cfg = pdf_cfg.get('ship_to', {})
+    bill_to_cfg = pdf_cfg.get('bill_to', {})
+    descripcion_producto = pdf_cfg.get('descripcion_producto', 'PRODUCTO')
 
-    # Datos de comercio
-    elements.append(Paragraph("<b>Datos de Envío</b>", styles["Heading2"]))
-    for k, v in datos_comercio.items():
-        elements.append(Paragraph(f"<b>{k.replace('_', ' ').capitalize()}:</b> {v}", styles["Normal"]))
-    elements.append(Spacer(1, 12))
+    # Estilos personalizados
+    title_style = ParagraphStyle('CustomTitle', parent=styles['Heading1'], fontSize=16, 
+                                  textColor=colors.HexColor('#000080'), alignment=TA_CENTER, 
+                                  spaceAfter=6, fontName='Helvetica-Bold')
+    header_style = ParagraphStyle('Header', parent=styles['Normal'], fontSize=8, fontName='Helvetica-Bold')
+    normal_style = ParagraphStyle('CustomNormal', parent=styles['Normal'], fontSize=8, fontName='Helvetica')
 
-    # Tabla de registros
-    if registros:
-        columnas = list(registros[0].keys())
-        data = [columnas] + [[str(r.get(c, "")) for c in columnas] for r in registros]
+    # ENCABEZADO
+    encabezado_data = [
+        [Paragraph("<b>PACKING SLIP</b>", title_style)],
+        [Paragraph(f"<b>{shipper_cfg.get('nombre', 'EMPRESA')}</b>", header_style)],
+        [Paragraph(shipper_cfg.get('direccion', ''), normal_style)],
+        [Paragraph(f"{shipper_cfg.get('ciudad', '')} {shipper_cfg.get('estado', '')}", normal_style)],
+        [Paragraph(shipper_cfg.get('cp', ''), normal_style)]
+    ]
+    tabla_encabezado = Table(encabezado_data, colWidths=[7*inch])
+    tabla_encabezado.setStyle(TableStyle([('ALIGN', (0,0), (-1,-1), 'CENTER')]))
+    elementos.append(tabla_encabezado)
+    elementos.append(Spacer(1, 10))
 
-        table = Table(data, repeatRows=1)
-        table_style = TableStyle([
-            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor(global_cfg.get("header_bg_color", "#E0E0E0"))),
-            ('TEXTCOLOR', (0, 0), (-1, 0), colors.black),
-            ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
-            ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
-            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-            ('FONTSIZE', (0, 0), (-1, 0), 10),
-        ])
-        table.setStyle(table_style)
-        elements.append(table)
-    else:
-        elements.append(Paragraph("No hay registros disponibles.", styles["Normal"]))
+    # INFORMACIÓN DE ENVÍO
+    shipping_data = [
+        ["Shipping date", "Seal No.", "PACKING LIST NO."],
+        [datos_comercio.get('shipping_date', ''), 
+         datos_comercio.get('seal_no', 'N/A'), 
+         datos_comercio.get('packing_slip_no', '')]
+    ]
+    tabla_shipping = Table(shipping_data, colWidths=[1.8*inch, 1.8*inch, 2*inch])
+    tabla_shipping.setStyle(TableStyle([
+        ('FONTNAME', (0,0), (-1,0), 'Helvetica-Bold'),
+        ('FONTSIZE', (0,0), (-1,-1), 9),
+        ('ALIGN', (0,0), (-1,-1), 'CENTER'),
+        ('GRID', (0,0), (-1,-1), 0.5, colors.black),
+        ('BACKGROUND', (0,0), (-1,0), colors.HexColor('#E0E0E0')),
+    ]))
+    elementos.append(tabla_shipping)
+    elementos.append(Spacer(1, 8))
 
-    # Pie de página
-    elements.append(Spacer(1, 20))
-    elements.append(Paragraph(f"Generado el {datetime.now().strftime('%d/%m/%Y %H:%M:%S')}", styles["Italic"]))
+    # TRES COLUMNAS
+    shipper_text = f"""<b>Shipper / Exporter:</b><br/>
+{shipper_cfg.get('nombre', '')}<br/>
+{shipper_cfg.get('direccion', '')}<br/>
+{shipper_cfg.get('ciudad', '')}<br/>
+{shipper_cfg.get('estado', '')}<br/>
+{shipper_cfg.get('cp', '')}"""
 
-    # Construir PDF
-    doc.build(elements)
+    shipto_text = f"""<b>Ship to:</b><br/>
+{datos_comercio.get('ship_to_name', ship_to_cfg.get('nombre', ''))}<br/>
+{datos_comercio.get('ship_to_address', ship_to_cfg.get('direccion', ''))}<br/>
+{datos_comercio.get('ship_to_city', ship_to_cfg.get('ciudad', ''))}<br/>
+TAX ID: {datos_comercio.get('ship_to_tax', ship_to_cfg.get('tax_id', ''))}"""
+
+    billto_text = f"""<b>Bill to:</b><br/>
+{datos_comercio.get('bill_to_name', bill_to_cfg.get('nombre', ''))}<br/>
+{datos_comercio.get('bill_to_address', bill_to_cfg.get('direccion', ''))}<br/>
+{datos_comercio.get('bill_to_city', bill_to_cfg.get('ciudad', ''))}<br/>
+{datos_comercio.get('bill_to_state', bill_to_cfg.get('estado', ''))}"""
+
+    tres_columnas = [[Paragraph(shipper_text, normal_style), 
+                      Paragraph(shipto_text, normal_style), 
+                      Paragraph(billto_text, normal_style)]]
+    tabla_tres = Table(tres_columnas, colWidths=[2.5*inch, 2.5*inch, 2.5*inch])
+    tabla_tres.setStyle(TableStyle([('VALIGN', (0,0), (-1,-1), 'TOP')]))
+    elementos.append(tabla_tres)
+    elementos.append(Spacer(1, 10))
+
+    # INFORMACIÓN ADICIONAL
+    info_adicional = [
+        ["Shipping method", "Incoterm:", "Commercial Invoice No.", "Country of Origin", "Country of Destination"],
+        [datos_comercio.get('shipping_method', 'LTL'), 
+         datos_comercio.get('incoterm', 'FCA'),
+         datos_comercio.get('commercial_invoice', ''),
+         datos_comercio.get('country_origin', 'México'),
+         datos_comercio.get('country_destination', 'Mexico')]
+    ]
+    tabla_info = Table(info_adicional, colWidths=[1.4*inch]*5)
+    tabla_info.setStyle(TableStyle([
+        ('FONTNAME', (0,0), (-1,0), 'Helvetica-Bold'),
+        ('FONTSIZE', (0,0), (-1,-1), 8),
+        ('ALIGN', (0,0), (-1,-1), 'CENTER'),
+        ('GRID', (0,0), (-1,-1), 0.5, colors.black),
+        ('BACKGROUND', (0,0), (-1,0), colors.HexColor('#E0E0E0')),
+    ]))
+    elementos.append(tabla_info)
+    elementos.append(Spacer(1, 10))
+
+    # TABLA DE PRODUCTOS
+    headers = ["Pallets No.", "Quantity", "Boxes", "Product No.", "Description", "Lot", "Manufacturing date"]
+    table_data = [headers]
+
+    total_quantity = 0
+    ultimo_pallet = ""
+
+    for reg in registros:
+        pallet_actual = reg.get('numero_pallet', '')
+        pallet_display = pallet_actual if pallet_actual != ultimo_pallet else ''
+        ultimo_pallet = pallet_actual
+        
+        fila = [
+            pallet_display,
+            reg.get('cantidad', ''),
+            reg.get('total_cajas', ''),
+            reg.get('n_parte', ''),
+            descripcion_producto,
+            reg.get('n_lote', ''),
+            reg.get('fecha', '')
+        ]
+        table_data.append(fila)
+        total_quantity += parse_int(reg.get('cantidad', 0))
+
+    col_widths = [0.8*inch, 0.9*inch, 0.7*inch, 1.2*inch, 2.3*inch, 0.8*inch, 1.3*inch]
+    tabla_productos = Table(table_data, colWidths=col_widths, repeatRows=1)
+    tabla_productos.setStyle(TableStyle([
+        ('BACKGROUND', (0,0), (-1,0), colors.HexColor('#000080')),
+        ('TEXTCOLOR', (0,0), (-1,0), colors.whitesmoke),
+        ('FONTNAME', (0,0), (-1,0), 'Helvetica-Bold'),
+        ('FONTSIZE', (0,0), (-1,0), 8),
+        ('FONTNAME', (0,1), (-1,-1), 'Helvetica'),
+        ('FONTSIZE', (0,1), (-1,-1), 7),
+        ('ALIGN', (0,0), (-1,-1), 'CENTER'),
+        ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
+        ('GRID', (0,0), (-1,-1), 0.5, colors.black),
+        ('BACKGROUND', (0,1), (0,-1), colors.yellow),
+        ('BACKGROUND', (1,1), (1,-1), colors.yellow),
+        ('BACKGROUND', (2,1), (2,-1), colors.yellow),
+        ('BACKGROUND', (3,1), (3,-1), colors.yellow),
+        ('BACKGROUND', (5,1), (5,-1), colors.yellow),
+        ('BACKGROUND', (6,1), (6,-1), colors.yellow),
+    ]))
+    elementos.append(tabla_productos)
+    elementos.append(Spacer(1, 10))
+
+    # TOTALES
+    pallets_unicos = set(reg.get('numero_pallet', '') for reg in registros if reg.get('numero_pallet'))
+    
+    totales_data = [
+        ["Total Pallets", "Dimensions (cm)", "Net weight (Kg)", "Gross weight (Kg)", "Total parts"],
+        [str(len(pallets_unicos)), datos_comercio.get('dimensions', ''), 
+         datos_comercio.get('net_weight', ''), datos_comercio.get('gross_weight', ''), str(total_quantity)]
+    ]
+    tabla_totales = Table(totales_data, colWidths=[1.4*inch]*5)
+    tabla_totales.setStyle(TableStyle([
+        ('FONTNAME', (0,0), (-1,0), 'Helvetica-Bold'),
+        ('FONTSIZE', (0,0), (-1,-1), 8),
+        ('ALIGN', (0,0), (-1,-1), 'CENTER'),
+        ('GRID', (0,0), (-1,-1), 0.5, colors.black),
+        ('BACKGROUND', (0,0), (-1,0), colors.HexColor('#E0E0E0')),
+    ]))
+    elementos.append(tabla_totales)
+    elementos.append(Spacer(1, 12))
+
+    # TRANSPORTE
+    transporte_titulo = [["Información del transporte:"]]
+    tabla_transporte_titulo = Table(transporte_titulo, colWidths=[7*inch])
+    tabla_transporte_titulo.setStyle(TableStyle([('FONTNAME', (0,0), (-1,0), 'Helvetica-Bold'), ('FONTSIZE', (0,0), (-1,0), 9)]))
+    elementos.append(tabla_transporte_titulo)
+    elementos.append(Spacer(1, 4))
+
+    transporte_data = [
+        ["BL/AWB", "Linea", "No. De Placa", "No. De Sello", "Nombre del Conductor"],
+        [datos_comercio.get('bl_awb', '-'), datos_comercio.get('linea', 'FEDEX FREIGHT'),
+         datos_comercio.get('placa', ''), datos_comercio.get('sello_transporte', '-'),
+         datos_comercio.get('conductor', '')]
+    ]
+    tabla_transporte = Table(transporte_data, colWidths=[1.4*inch]*5)
+    tabla_transporte.setStyle(TableStyle([
+        ('FONTNAME', (0,0), (-1,0), 'Helvetica-Bold'),
+        ('FONTSIZE', (0,0), (-1,-1), 8),
+        ('ALIGN', (0,0), (-1,-1), 'CENTER'),
+        ('GRID', (0,0), (-1,-1), 0.5, colors.black),
+        ('BACKGROUND', (0,0), (-1,0), colors.HexColor('#E0E0E0')),
+    ]))
+    elementos.append(tabla_transporte)
+    elementos.append(Spacer(1, 15))
+
+    # FIRMAS
+    firma_data = [
+        ["Firma Conductor:", "", f"Fecha: {datos_comercio.get('fecha', datetime.now().strftime('%d/%m/%Y'))}"],
+        ["", "", ""],
+        ["Autoriza: Ana Maya", "", "Fecha:"],
+        ["Foreign Trade and Logistics Coordinator", "", ""]
+    ]
+    tabla_firmas = Table(firma_data, colWidths=[2.3*inch, 2.4*inch, 2.3*inch])
+    tabla_firmas.setStyle(TableStyle([
+        ('FONTNAME', (0,0), (-1,-1), 'Helvetica'),
+        ('FONTSIZE', (0,0), (-1,-1), 8),
+        ('ALIGN', (0,0), (0,-1), 'LEFT'),
+        ('ALIGN', (2,0), (2,-1), 'RIGHT'),
+    ]))
+    elementos.append(tabla_firmas)
+
+    doc.build(elementos)
     buffer.seek(0)
     return buffer
-
-
-def _load_global_pdf_config():
-    """Carga configuración general desde config/default.json"""
-    import json
-    from pathlib import Path
-    default_path = Path("config/default.json")
-
-    if default_path.exists():
-        with open(default_path, 'r', encoding='utf-8') as f:
-            cfg = json.load(f)
-            return cfg.get("pdf", {})
-    return {}
-
-# Funciones helper para usar en Streamlit
-def load_config_manager(config_path: str = "config/models.json") -> ConfigManager:
-    """Carga el gestor de configuraciones (cacheable en Streamlit)"""
-    return ConfigManager(config_path)
-
-
-def get_modelo_info(config_manager: ConfigManager, modelo: str) -> str:
-    """Obtiene información descriptiva de un modelo"""
-    model_cfg = config_manager.get_model_config(modelo)
-    if model_cfg:
-        nombre = model_cfg.get('nombre_completo', modelo)
-        desc = model_cfg.get('descripcion', '')
-        return f"{nombre} - {desc}" if desc else nombre
-    return modelo
