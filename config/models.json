@@ -1,5 +1,5 @@
 {
-  "ZF": {
+  "03. HSPS-ALM-8.5.4-R09 Informacion embarque ZF (3)": {
     "nombre_completo": "ZF Passive Safety",
     "activo": true,
     "excel": {
@@ -8,15 +8,15 @@
       "buscar_header_en_filas": 5,
       "detener_en": ["TOTAL GENERAL", "Total General"],
       "columnas": {
-        "numero_pallet": ["Numero de Pallet", "numero_de_pallet", "pallet", "num pallet", "no pallet"],
-        "n_lote": ["N. de lote", "n de lote", "lote", "no lote", "n lote"],
-        "fecha": ["Fecha", "date", "manufacturing date"],
-        "modelo": ["Modelo", "model"],
-        "n_parte": ["N. Parte", "n parte", "parte", "part"],
-        "cantidad": ["Cantidad", "quantity", "qty", "piezas"],
-        "total_cajas": ["Total de cajas", "total cajas", "cajas", "boxes"],
-        "peso_lote": ["Peso Lote", "peso del lote", "net weight", "peso neto"],
-        "peso_acumulado": ["Peso acumulado", "gross weight", "peso bruto"]
+        "numero_pallet": ["numero de pallet", "numero_de_pallet", "pallet"],
+        "n_lote": ["n. de lote", "n de lote", "lote"],
+        "fecha": ["fecha"],
+        "modelo": ["modelo"],
+        "n_parte": ["n. parte", "n parte", "parte"],
+        "cantidad": ["cantidad"],
+        "total_cajas": ["total de cajas", "cajas"],
+        "peso_lote": ["peso lote"],
+        "peso_acumulado": ["peso acumulado"]
       },
       "calculos": {
         "metodo": "celda_fija",
