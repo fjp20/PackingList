@@ -1,0 +1,13 @@
+# Core dependencies
+streamlit==1.32.0
+pandas==2.2.0
+openpyxl==3.1.2
+
+# PDF Generation
+reportlab==4.1.0
+
+# Optional: Excel reading (xlrd for .xls files)
+xlrd==2.0.1
+
+# Type hints support
+typing-extensions==4.9.0

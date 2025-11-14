@@ -1,0 +1,178 @@
+{
+  "zf": {
+    "nombre_completo": "ZF Passive Safety",
+    "activo": true,
+    "excel": {
+      "hoja_datos": "Formato ZF",
+      "hoja_calculos": "Cálculos",
+      "buscar_header_en_filas": 5,
+      "detener_en": ["TOTAL GENERAL", "Total General"],
+      "columnas": {
+        "numero_pallet": ["numero de pallet", "numero_de_pallet", "pallet"],
+        "n_lote": ["n. de lote", "n de lote", "lote"],
+        "fecha": ["fecha"],
+        "modelo": ["modelo"],
+        "n_parte": ["n. parte", "n parte", "parte"],
+        "cantidad": ["cantidad"],
+        "total_cajas": ["total de cajas", "cajas"],
+        "peso_lote": ["peso lote"],
+        "peso_acumulado": ["peso acumulado"]
+      },
+      "calculos": {
+        "metodo": "celda_fija",
+        "peso_neto": {"fila": 14, "columna": 1},
+        "peso_bruto": {"fila": 15, "columna": 1},
+        "dimensiones": {"fila": 16, "columna": 1}
+      }
+    },
+    "pdf": {
+      "descripcion_producto": "SEATBELT RETURN SPRING UNIT",
+      "shipper": {
+        "nombre": "HS POWER SPRING MÉXICO SA DE CV",
+        "direccion": "Circuito Cerezos Sur No. 106,",
+        "ciudad": "Parque Industrial San Francisco,",
+        "estado": "San Francisco de los Romo,",
+        "cp": "Aguascalientes, México. C.P.20355"
+      },
+      "ship_to": {
+        "nombre": "ZF PASSIVE SAFETY US INC.",
+        "direccion": "9600 International Boulevard, Docks 5-8,",
+        "ciudad": "Pharr, Tx, USA, C.P 78577",
+        "tax_id": "341758354"
+      },
+      "bill_to": {
+        "nombre": "TRW VEHICLE SAFETY SYSTEMS",
+        "direccion": "Blvd Mike Allen 1370 S/N,",
+        "ciudad": "Parque Industrial Reynosa,",
+        "estado": "Reynosa, Tamaulipas, Mex. C.P 88788"
+      },
+      "defaults": {
+        "shipping_method": "LTL",
+        "incoterm": "FCA",
+        "country_origin": "México",
+        "country_destination": "Mexico",
+        "dimensions": "100 X 110 X 109",
+        "seal_no": "N/A",
+        "bl_awb": "-",
+        "linea": "FEDEX FREIGHT",
+        "sello_transporte": "-"
+      }
+    }
+  },
+  "MODELO_B": {
+    "nombre_completo": "Modelo B - Cliente Ejemplo",
+    "activo": true,
+    "excel": {
+      "hoja_datos": "Datos",
+      "hoja_calculos": "Resumen",
+      "buscar_header_en_filas": 3,
+      "detener_en": ["TOTAL", "FIN"],
+      "columnas": {
+        "numero_pallet": ["pallet", "num pallet"],
+        "n_lote": ["lote", "batch"],
+        "fecha": ["fecha", "date"],
+        "modelo": ["modelo", "model"],
+        "n_parte": ["parte", "part number"],
+        "cantidad": ["cantidad", "qty"],
+        "total_cajas": ["cajas", "boxes"]
+      },
+      "calculos": {
+        "metodo": "busqueda",
+        "keywords": {
+          "peso_neto": ["peso neto", "net weight"],
+          "peso_bruto": ["peso bruto", "gross weight"],
+          "dimensiones": ["dimensiones", "dimensions"]
+        }
+      }
+    },
+    "pdf": {
+      "descripcion_producto": "COMPONENTE AUTOMOTRIZ",
+      "shipper": {
+        "nombre": "HS POWER SPRING MÉXICO SA DE CV",
+        "direccion": "Circuito Cerezos Sur No. 106,",
+        "ciudad": "Parque Industrial San Francisco,",
+        "estado": "San Francisco de los Romo,",
+        "cp": "Aguascalientes, México. C.P.20355"
+      },
+      "ship_to": {
+        "nombre": "CLIENTE B S.A. DE C.V.",
+        "direccion": "Calle Principal 123,",
+        "ciudad": "Ciudad, Estado, C.P 12345",
+        "tax_id": "123456789"
+      },
+      "bill_to": {
+        "nombre": "CLIENTE B S.A. DE C.V.",
+        "direccion": "Calle Principal 123,",
+        "ciudad": "Ciudad, Estado, C.P 12345",
+        "estado": ""
+      },
+      "defaults": {
+        "shipping_method": "FTL",
+        "incoterm": "FOB",
+        "country_origin": "México",
+        "country_destination": "USA",
+        "dimensions": "120 X 100 X 150",
+        "seal_no": "",
+        "bl_awb": "",
+        "linea": "TRANSPORTISTA",
+        "sello_transporte": ""
+      }
+    }
+  },
+  "CUSTOM": {
+    "nombre_completo": "Configuración Personalizada",
+    "activo": true,
+    "descripcion": "Permite configurar manualmente todas las opciones",
+    "excel": {
+      "hoja_datos": null,
+      "hoja_calculos": null,
+      "buscar_header_en_filas": 5,
+      "detener_en": ["TOTAL"],
+      "columnas": {
+        "numero_pallet": ["pallet"],
+        "n_lote": ["lote"],
+        "fecha": ["fecha"],
+        "modelo": ["modelo"],
+        "n_parte": ["parte"],
+        "cantidad": ["cantidad"],
+        "total_cajas": ["cajas"]
+      },
+      "calculos": {
+        "metodo": "manual"
+      }
+    },
+    "pdf": {
+      "descripcion_producto": "",
+      "shipper": {
+        "nombre": "HS POWER SPRING MÉXICO SA DE CV",
+        "direccion": "Circuito Cerezos Sur No. 106,",
+        "ciudad": "Parque Industrial San Francisco,",
+        "estado": "San Francisco de los Romo,",
+        "cp": "Aguascalientes, México. C.P.20355"
+      },
+      "ship_to": {
+        "nombre": "",
+        "direccion": "",
+        "ciudad": "",
+        "tax_id": ""
+      },
+      "bill_to": {
+        "nombre": "",
+        "direccion": "",
+        "ciudad": "",
+        "estado": ""
+      },
+      "defaults": {
+        "shipping_method": "LTL",
+        "incoterm": "FCA",
+        "country_origin": "México",
+        "country_destination": "Mexico",
+        "dimensions": "100 X 110 X 109",
+        "seal_no": "",
+        "bl_awb": "",
+        "linea": "",
+        "sello_transporte": ""
+      }
+    }
+  }
+}
